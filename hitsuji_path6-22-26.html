@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#332a4d">
+<title>ひつじの一本道</title>
+<style>
+  :root{
+    --bg-deep:#2b2440;
+    --bg-mid:#5a4172;
+    --panel:#f7f1e3;
+    --panel-edge:#e8dcc0;
+    --ink:#332a40;
+    --ink-soft:#6f6480;
+    --grass:#cdd9ac;
+    --grass-edge:#b7c592;
+    --trail:#f0e1ad;
+    --trail-edge:#dcc787;
+    --wolfcell:#3c3454;
+    --wolfcell-edge:#2c2640;
+    --yarn:#c1502e;
+    --yarn-dark:#8e3a20;
+    --gold:#e3aa3e;
+    --gold-soft:#f3d999;
+    --good:#5d8c4a;
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Maru Gothic ProN","Hiragino Sans","Yu Gothic","Noto Sans JP",sans-serif;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    min-height:100vh;
+    background:
+      radial-gradient(ellipse 120% 70% at 50% 0%, #6c5189 0%, var(--bg-mid) 45%, var(--bg-deep) 100%);
+    color:var(--ink);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:18px 14px 36px;
+    overflow-x:hidden;
+  }
+  .wrap{ width:100%; max-width:480px; display:flex; flex-direction:column; align-items:center; }
+
+  .title-row{ text-align:center; margin-bottom:4px; }
+  .title{
+    color:#fbf6e8;
+    font-size:26px;
+    font-weight:800;
+    letter-spacing:.02em;
+    margin:0;
+    text-shadow:0 2px 0 rgba(0,0,0,.18);
+  }
+  .title .sheep-ico{ display:inline-block; transform:translateY(2px); }
+  .subtitle{
+    color:#d9cdee;
+    font-size:12.5px;
+    margin:6px auto 14px;
+    max-width:340px;
+    line-height:1.6;
+  }
+
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--panel-edge);
+    border-radius:18px;
+    box-shadow:0 10px 26px rgba(20,12,35,.35), inset 0 1px 0 rgba(255,255,255,.6);
+    padding:14px 14px 16px;
+    width:100%;
+  }
+
+  .controls-row{
+    display:flex;
+    gap:8px;
+    justify-content:center;
+    margin-bottom:10px;
+    flex-wrap:wrap;
+  }
+  .pill{
+    border:none;
+    border-radius:999px;
+    padding:7px 14px;
+    font-size:12.5px;
+    font-weight:700;
+    cursor:pointer;
+    background:#eee3c8;
+    color:var(--ink-soft);
+    transition:transform .12s, background .15s, color .15s;
+  }
+  .pill:active{ transform:scale(.94); }
+  .pill.active{
+    background:var(--yarn);
+    color:#fff7ec;
+    box-shadow:0 3px 8px rgba(193,80,46,.4);
+  }
+
+  .status-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:10px;
+    padding:0 4px;
+  }
+  .status-text{ font-size:13px; font-weight:700; color:var(--ink); }
+  .status-sub{ font-size:11px; color:var(--ink-soft); }
+
+  .board-frame{
+    position:relative;
+    width:100%;
+    border-radius:14px;
+    overflow:hidden;
+    background:#9aa97a;
+    padding:6px;
+    box-shadow:inset 0 2px 10px rgba(0,0,0,.18);
+  }
+  .board{
+    position:relative;
+    display:grid;
+    grid-template-columns:repeat(8,1fr);
+    grid-template-rows:repeat(8,1fr);
+    width:100%;
+    aspect-ratio:1/1;
+    gap:3px;
+    touch-action:none;
+    user-select:none;
+  }
+  .cell{
+    position:relative;
+    border-radius:7px;
+    background:var(--grass);
+    border:1px solid var(--grass-edge);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:min(5.4vw, 24px);
+    transition:background .15s, border-color .15s, transform .1s;
+  }
+  .cell.visited{ background:var(--trail); border-color:var(--trail-edge); }
+  .cell.wolf{ background:var(--wolfcell); border-color:var(--wolfcell-edge); cursor:not-allowed; }
+  .cell.goal:not(.visited){
+    background:var(--gold-soft);
+    border:2px dashed var(--gold);
+  }
+  .cell.head{ transform:scale(1.04); z-index:3; }
+  .cell.head .emoji{ animation:bounce .5s ease; }
+  @keyframes bounce{
+    0%{ transform:scale(.7) translateY(2px); }
+    60%{ transform:scale(1.18) translateY(-3px); }
+    100%{ transform:scale(1) translateY(0); }
+  }
+  @keyframes shake{
+    0%,100%{ transform:translateX(0); }
+    25%{ transform:translateX(-4px); }
+    75%{ transform:translateX(4px); }
+  }
+  .cell.shake{ animation:shake .25s; }
+
+  svg.pathlayer{
+    position:absolute;
+    inset:6px;
+    pointer-events:none;
+    z-index:2;
+  }
+
+  .btn-row{
+    display:flex;
+    gap:8px;
+    margin-top:12px;
+  }
+  .btn{
+    flex:1;
+    border:none;
+    border-radius:12px;
+    padding:11px 8px;
+    font-size:13px;
+    font-weight:700;
+    cursor:pointer;
+    transition:transform .12s, filter .15s;
+  }
+  .btn:active{ transform:scale(.96); }
+  .btn-undo{ background:#e7ddc4; color:var(--ink); }
+  .btn-reset{ background:#e7ddc4; color:var(--ink); }
+  .btn-new{ background:var(--yarn); color:#fff7ec; box-shadow:0 4px 10px rgba(193,80,46,.35); }
+
+  .hint{
+    margin-top:10px;
+    font-size:11.5px;
+    color:var(--ink-soft);
+    text-align:center;
+    line-height:1.6;
+  }
+
+  .toast{
+    position:fixed;
+    bottom:24px;
+    left:50%;
+    transform:translateX(-50%) translateY(20px);
+    background:rgba(40,32,58,.92);
+    color:#fbf6e8;
+    padding:10px 18px;
+    border-radius:999px;
+    font-size:13px;
+    font-weight:600;
+    opacity:0;
+    transition:opacity .25s, transform .25s;
+    pointer-events:none;
+    z-index:50;
+    white-space:nowrap;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  .overlay{
+    position:fixed; inset:0;
+    background:rgba(20,14,32,.55);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:100;
+    padding:20px;
+  }
+  .overlay.show{ display:flex; }
+  .modal{
+    background:var(--panel);
+    border-radius:20px;
+    padding:28px 24px 22px;
+    max-width:320px;
+    text-align:center;
+    box-shadow:0 20px 50px rgba(0,0,0,.4);
+  }
+  .modal .big-emoji{ font-size:46px; margin-bottom:4px; }
+  .modal h2{ margin:6px 0 4px; font-size:20px; color:var(--ink); }
+  .modal p{ margin:0 0 18px; font-size:13px; color:var(--ink-soft); }
+  .modal .btn-new{ width:100%; padding:13px; }
+
+  .gen-overlay{
+    position:absolute; inset:6px;
+    background:rgba(247,241,227,.82);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    border-radius:10px;
+    font-size:13px;
+    font-weight:700;
+    color:var(--ink-soft);
+    z-index:10;
+  }
+  .gen-overlay.show{ display:flex; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="title-row">
+    <h1 class="title"><span class="sheep-ico">🐑</span> ひつじの一本道</h1>
+    <p class="subtitle">オオカミ🐺のいないマスだけを通って、すべての草地を一度ずつ歩き、ゴール🏁までひとつの線でつなげよう。</p>
+  </div>
+
+  <div class="panel">
+    <div class="controls-row" id="diffRow">
+      <button class="pill" data-diff="easy">かんたん</button>
+      <button class="pill active" data-diff="normal">ふつう</button>
+      <button class="pill" data-diff="hard">むずかしい</button>
+    </div>
+
+    <div class="status-row">
+      <div>
+        <div class="status-text" id="statusText">進んだ草地: 0 / 0</div>
+        <div class="status-sub" id="statusSub">残りのマスをつなげよう</div>
+      </div>
+    </div>
+
+    <div class="board-frame">
+      <div class="board" id="board"></div>
+      <svg class="pathlayer" id="pathLayer" viewBox="0 0 8 8" preserveAspectRatio="none"></svg>
+      <div class="gen-overlay" id="genOverlay">パズルを作成中…</div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-undo" id="undoBtn">↩ ひとつ戻る</button>
+      <button class="btn btn-reset" id="resetBtn">⟲ やり直す</button>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-new" id="newBtn" style="width:100%;">🔀 新しいパズル</button>
+    </div>
+  </div>
+
+  <p class="hint">指で🐑をなぞって動かそう。進めるのは上下左右のマスだけ、同じマスは通れません。後ろになぞると一歩戻れます。</p>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="overlay" id="winOverlay">
+  <div class="modal">
+    <div class="big-emoji">🐑🎉</div>
+    <h2>ゴールできました!</h2>
+    <p id="winDetail">すべての草地を通ってゴールに着きました。</p>
+    <button class="btn btn-new" id="winNewBtn">もう一度遊ぶ</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const N = 8;
+  const START = [7, 0];
+  const GOAL = [0, 7];
+  const DIFFICULTIES = { easy: [1, 5], normal: [7, 17], hard: [19, 35] };
+
+  const key = (r, c) => r * N + c;
+
+  function neighbors(r, c) {
+    const res = [];
+    if (r > 0) res.push([r - 1, c]);
+    if (r < N - 1) res.push([r + 1, c]);
+    if (c > 0) res.push([r, c - 1]);
+    if (c < N - 1) res.push([r, c + 1]);
+    return res;
+  }
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function attemptWalk(maxBacktrack, noise) {
+    const visited = new Set([key(START[0], START[1])]);
+    const path = [START];
+    let pops = 0;
+
+    while (true) {
+      const [r, c] = path[path.length - 1];
+      const cands = neighbors(r, c).filter(([nr, nc]) => !visited.has(key(nr, nc)));
+      const isGoal = ([nr, nc]) => nr === GOAL[0] && nc === GOAL[1];
+      const nonGoal = shuffle(cands.filter((p) => !isGoal(p)));
+      const hasGoal = cands.some(isGoal);
+
+      const degree = ([nr, nc]) =>
+        neighbors(nr, nc).filter(([r2, c2]) => !visited.has(key(r2, c2)) && !isGoal([r2, c2])).length;
+
+      nonGoal.sort((a, b) => degree(a) - degree(b));
+
+      let moved = false;
+      if (nonGoal.length > 0) {
+        let idx = 0;
+        if (nonGoal.length > 1 && Math.random() < noise) {
+          idx = Math.floor(Math.random() * Math.min(3, nonGoal.length));
+        }
+        const [nr, nc] = nonGoal[idx];
+        visited.add(key(nr, nc));
+        path.push([nr, nc]);
+        moved = true;
+      } else if (hasGoal) {
+        visited.add(key(GOAL[0], GOAL[1]));
+        path.push(GOAL);
+        moved = true;
+      }
+
+      if (!moved) {
+        if (pops < maxBacktrack && path.length > 1) {
+          const last = path.pop();
+          visited.delete(key(last[0], last[1]));
+          pops++;
+          continue;
+        } else {
+          break;
+        }
+      }
+    }
+    return path;
+  }
+
+  function pathEndsAtGoal(path) {
+    const last = path[path.length - 1];
+    return last[0] === GOAL[0] && last[1] === GOAL[1];
+  }
+
+  function generatePuzzle(diffKey, timeBudgetMs) {
+    const [minW, maxW] = DIFFICULTIES[diffKey];
+    const start = Date.now();
+    let best = null;
+    let bestDist = Infinity;
+    while (Date.now() - start < timeBudgetMs) {
+      const bt = [800, 2000, 4000][Math.floor(Math.random() * 3)];
+      const noise = [0.05, 0.15, 0.3][Math.floor(Math.random() * 3)];
+      const path = attemptWalk(bt, noise);
+      if (!pathEndsAtGoal(path)) continue;
+      const wolves = N * N - path.length;
+      if (wolves >= minW && wolves <= maxW) return { path, wolves };
+      const dist = wolves < minW ? minW - wolves : wolves - maxW;
+      if (dist < bestDist) { bestDist = dist; best = { path, wolves }; }
+    }
+    return best;
+  }
+
+  // ---------- game state ----------
+  let difficulty = "normal";
+  let allowedSet = new Set();   // playable (non-wolf) cell keys
+  let requiredCount = 0;
+  let path = [];                // array of [r,c], current player path
+  let pathSet = new Set();
+
+  const boardEl = document.getElementById("board");
+  const pathLayer = document.getElementById("pathLayer");
+  const statusText = document.getElementById("statusText");
+  const statusSub = document.getElementById("statusSub");
+  const toastEl = document.getElementById("toast");
+  const genOverlay = document.getElementById("genOverlay");
+  const winOverlay = document.getElementById("winOverlay");
+
+  const cellEls = [];
+
+  function buildBoardDom() {
+    boardEl.innerHTML = "";
+    cellEls.length = 0;
+    for (let r = 0; r < N; r++) {
+      for (let c = 0; c < N; c++) {
+        const div = document.createElement("div");
+        div.className = "cell";
+        div.dataset.r = r;
+        div.dataset.c = c;
+        const span = document.createElement("span");
+        span.className = "emoji";
+        div.appendChild(span);
+        boardEl.appendChild(div);
+        cellEls[key(r, c)] = div;
+      }
+    }
+  }
+
+  let toastTimer = null;
+  function showToast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove("show"), 1400);
+  }
+
+  function newPuzzle(diffKey) {
+    difficulty = diffKey;
+    document.querySelectorAll(".pill").forEach((p) => {
+      p.classList.toggle("active", p.dataset.diff === diffKey);
+    });
+    genOverlay.classList.add("show");
+    setTimeout(() => {
+      const result = generatePuzzle(diffKey, 900);
+      allowedSet = new Set(result.path.map(([r, c]) => key(r, c)));
+      requiredCount = allowedSet.size;
+      path = [START];
+      pathSet = new Set([key(START[0], START[1])]);
+      genOverlay.classList.remove("show");
+      render();
+    }, 10);
+  }
+
+  function isAllowed(r, c) { return allowedSet.has(key(r, c)); }
+
+  function tryMoveTo(r, c) {
+    if (r < 0 || c < 0 || r >= N || c >= N) return;
+    const tail = path[path.length - 1];
+    const k = key(r, c);
+
+    // step back (undo by dragging onto previous cell)
+    if (path.length > 1) {
+      const prev = path[path.length - 2];
+      if (prev[0] === r && prev[1] === c) {
+        path.pop();
+        pathSet.delete(key(tail[0], tail[1]));
+        render();
+        return;
+      }
+    }
+
+    if (pathSet.has(k)) return;          // already visited
+    if (!isAllowed(r, c)) {               // wolf cell
+      flashShake(r, c);
+      return;
+    }
+    const dr = Math.abs(tail[0] - r), dc = Math.abs(tail[1] - c);
+    if (dr + dc !== 1) return;            // not orthogonally adjacent
+
+    const isGoalCell = (r === GOAL[0] && c === GOAL[1]);
+    if (isGoalCell && pathSet.size + 1 !== requiredCount) {
+      showToast("まだ通っていない草地があるよ🌿");
+      flashShake(r, c);
+      return;
+    }
+
+    path.push([r, c]);
+    pathSet.add(k);
+    render();
+
+    if (isGoalCell && pathSet.size === requiredCount) {
+      setTimeout(showWin, 250);
+    }
+  }
+
+  function flashShake(r, c) {
+    const el = cellEls[key(r, c)];
+    el.classList.remove("shake");
+    requestAnimationFrame(() => {
+      el.classList.add("shake");
+      setTimeout(() => el.classList.remove("shake"), 260);
+    });
+  }
+
+  function undo() {
+    if (path.length <= 1) return;
+    const last = path.pop();
+    pathSet.delete(key(last[0], last[1]));
+    render();
+  }
+
+  function resetPath() {
+    path = [START];
+    pathSet = new Set([key(START[0], START[1])]);
+    render();
+  }
+
+  function render() {
+    for (let r = 0; r < N; r++) {
+      for (let c = 0; c < N; c++) {
+        const k = key(r, c);
+        const el = cellEls[k];
+        const span = el.querySelector(".emoji");
+        el.classList.remove("visited", "wolf", "goal", "head");
+        const isStart = (r === START[0] && c === START[1]);
+        const isGoalCell = (r === GOAL[0] && c === GOAL[1]);
+        const isWolf = !allowedSet.has(k);
+        const isVisited = pathSet.has(k);
+        const isHead = path.length && path[path.length - 1][0] === r && path[path.length - 1][1] === c;
+
+        if (isGoalCell) el.classList.add("goal");
+        if (isVisited) el.classList.add("visited");
+
+        if (isHead) {
+          el.classList.add("head");
+          span.textContent = "🐑";
+        } else if (isWolf) {
+          el.classList.add("wolf");
+          span.textContent = "🐺";
+        } else if (isGoalCell && !isVisited) {
+          span.textContent = "🏁";
+        } else {
+          span.textContent = "";
+        }
+        void isStart;
+      }
+    }
+    drawPathLine();
+    statusText.textContent = `進んだ草地: ${pathSet.size} / ${requiredCount}`;
+    statusSub.textContent = pathSet.size === requiredCount ? "ゴール目前!🏁" : "残りのマスをつなげよう";
+  }
+
+  function drawPathLine() {
+    pathLayer.innerHTML = "";
+    if (path.length < 2) return;
+    const pts = path.map(([r, c]) => `${c + 0.5},${r + 0.5}`).join(" ");
+
+    const outline = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+    outline.setAttribute("points", pts);
+    outline.setAttribute("fill", "none");
+    outline.setAttribute("stroke", "#8e3a20");
+    outline.setAttribute("stroke-width", "0.30");
+    outline.setAttribute("stroke-linecap", "round");
+    outline.setAttribute("stroke-linejoin", "round");
+    pathLayer.appendChild(outline);
+
+    const main = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+    main.setAttribute("points", pts);
+    main.setAttribute("fill", "none");
+    main.setAttribute("stroke", "#c1502e");
+    main.setAttribute("stroke-width", "0.18");
+    main.setAttribute("stroke-linecap", "round");
+    main.setAttribute("stroke-linejoin", "round");
+    pathLayer.appendChild(main);
+
+    path.forEach(([r, c]) => {
+      const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      dot.setAttribute("cx", c + 0.5);
+      dot.setAttribute("cy", r + 0.5);
+      dot.setAttribute("r", "0.085");
+      dot.setAttribute("fill", "#c1502e");
+      pathLayer.appendChild(dot);
+    });
+  }
+
+  function showWin() {
+    const label = { easy: "かんたん", normal: "ふつう", hard: "むずかしい" }[difficulty];
+    document.getElementById("winDetail").textContent =
+      `「${label}」で ${requiredCount} マスすべてを通ってゴールできました!`;
+    winOverlay.classList.add("show");
+  }
+
+  // ---------- pointer handling ----------
+  let dragging = false;
+  let lastCellKey = null;
+
+  function cellFromPoint(x, y) {
+    const el = document.elementFromPoint(x, y);
+    if (!el) return null;
+    const cell = el.closest(".cell");
+    if (!cell) return null;
+    return [parseInt(cell.dataset.r, 10), parseInt(cell.dataset.c, 10)];
+  }
+
+  boardEl.addEventListener("pointerdown", (e) => {
+    dragging = true;
+    lastCellKey = null;
+    try { boardEl.setPointerCapture(e.pointerId); } catch (err) { /* noop */ }
+    const pos = cellFromPoint(e.clientX, e.clientY);
+    if (pos) {
+      tryMoveTo(pos[0], pos[1]);
+      lastCellKey = key(pos[0], pos[1]);
+    }
+    e.preventDefault();
+  });
+
+  boardEl.addEventListener("pointermove", (e) => {
+    if (!dragging) return;
+    const pos = cellFromPoint(e.clientX, e.clientY);
+    if (!pos) return;
+    const k = key(pos[0], pos[1]);
+    if (k === lastCellKey) return;
+    lastCellKey = k;
+    tryMoveTo(pos[0], pos[1]);
+  });
+
+  function endDrag() { dragging = false; lastCellKey = null; }
+  boardEl.addEventListener("pointerup", endDrag);
+  boardEl.addEventListener("pointercancel", endDrag);
+  boardEl.addEventListener("pointerleave", () => { /* keep dragging across small gaps */ });
+
+  // ---------- wiring ----------
+  document.getElementById("diffRow").addEventListener("click", (e) => {
+    const btn = e.target.closest(".pill");
+    if (!btn) return;
+    newPuzzle(btn.dataset.diff);
+  });
+  document.getElementById("undoBtn").addEventListener("click", undo);
+  document.getElementById("resetBtn").addEventListener("click", resetPath);
+  document.getElementById("newBtn").addEventListener("click", () => newPuzzle(difficulty));
+  document.getElementById("winNewBtn").addEventListener("click", () => {
+    winOverlay.classList.remove("show");
+    newPuzzle(difficulty);
+  });
+
+  buildBoardDom();
+  newPuzzle(difficulty);
+})();
+</script>
+</body>
+</html>

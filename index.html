@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#332a4d">
+<title>作品ギャラリー</title>
+<style>
+  :root{
+    --bg-deep:#2b2440;
+    --bg-mid:#5a4172;
+    --panel:#f7f1e3;
+    --panel-edge:#e8dcc0;
+    --ink:#332a40;
+    --ink-soft:#6f6480;
+    --gold:#e3aa3e;
+    --yarn:#c1502e;
+    --yarn-dark:#8e3a20;
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Maru Gothic ProN","Hiragino Sans","Yu Gothic","Noto Sans JP",sans-serif;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    min-height:100vh;
+    background:
+      radial-gradient(ellipse 120% 70% at 50% 0%, #6c5189 0%, var(--bg-mid) 45%, var(--bg-deep) 100%);
+    color:var(--ink);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:40px 18px 60px;
+  }
+  .wrap{ width:100%; max-width:720px; }
+
+  header{ text-align:center; margin-bottom:34px; }
+  .eyebrow{
+    display:inline-block;
+    color:var(--gold);
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:.18em;
+    margin-bottom:10px;
+  }
+  h1{
+    color:#fbf6e8;
+    font-size:clamp(28px, 6vw, 38px);
+    font-weight:800;
+    margin:0 0 10px;
+    text-shadow:0 2px 0 rgba(0,0,0,.18);
+  }
+  header p{
+    color:#d9cdee;
+    font-size:14px;
+    line-height:1.7;
+    max-width:420px;
+    margin:0 auto;
+  }
+
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(260px, 1fr));
+    gap:18px;
+  }
+
+  .card{
+    background:var(--panel);
+    border:1px solid var(--panel-edge);
+    border-radius:18px;
+    overflow:hidden;
+    box-shadow:0 10px 26px rgba(20,12,35,.3), inset 0 1px 0 rgba(255,255,255,.6);
+    display:flex;
+    flex-direction:column;
+    text-decoration:none;
+    color:var(--ink);
+    transition:transform .15s, box-shadow .15s;
+  }
+  .card:hover{ transform:translateY(-3px); box-shadow:0 14px 30px rgba(20,12,35,.38); }
+  .card:active{ transform:scale(.98); }
+
+  .thumb{
+    height:120px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:52px;
+  }
+  .thumb.theme-meadow{ background:linear-gradient(135deg,#cdd9ac,#9aa97a); }
+
+  .card-body{ padding:16px 18px 18px; display:flex; flex-direction:column; gap:6px; flex:1; }
+  .card-title{ font-size:16px; font-weight:800; margin:0; }
+  .card-desc{ font-size:12.5px; color:var(--ink-soft); line-height:1.6; margin:0 0 10px; flex:1; }
+
+  .play-btn{
+    align-self:flex-start;
+    background:var(--yarn);
+    color:#fff7ec;
+    font-size:12.5px;
+    font-weight:700;
+    padding:8px 16px;
+    border-radius:999px;
+    box-shadow:0 3px 8px rgba(193,80,46,.35);
+  }
+
+  /* placeholder card for future works */
+  .card.placeholder{
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    color:var(--ink-soft);
+    border-style:dashed;
+    box-shadow:none;
+    min-height:220px;
+  }
+  .card.placeholder .thumb{ background:transparent; font-size:34px; opacity:.5; }
+  .card.placeholder .card-body{ padding-top:0; }
+  .card.placeholder:hover{ transform:none; }
+
+  footer{
+    margin-top:40px;
+    text-align:center;
+    color:#c9bcdf;
+    font-size:11.5px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <span class="eyebrow">WORKS</span>
+    <h1>作品ギャラリー</h1>
+    <p>つくったゲームやアプリをここにまとめています。気になるものを選んで遊んでみてください。</p>
+  </header>
+
+  <div class="grid">
+
+    <!-- ============================================================
+         作品カード ここから(1作品ごとに <a class="card">...</a> を1つ)
+         新しい作品を追加するときは、この <a>...</a> ブロックを
+         コピーして下に貼り付け、href・絵文字・タイトル・説明文を
+         書き換えてください。
+         ============================================================ -->
+    <a class="card" href="hitsuji_path.html">
+      <div class="thumb theme-meadow">🐑</div>
+      <div class="card-body">
+        <h2 class="card-title">ひつじの一本道</h2>
+        <p class="card-desc">オオカミを避けて、すべての草地を一度ずつ通りゴールへ向かう一筆書きパズル。</p>
+        <span class="play-btn">あそぶ →</span>
+      </div>
+    </a>
+    <!-- ============================================================
+         作品カード ここまで。この上に新しいカードを追加していきます。
+         ============================================================ -->
+
+    <div class="card placeholder">
+      <div class="thumb">✨</div>
+      <div class="card-body">
+        <p class="card-desc">次の作品はここに追加予定</p>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>© <span id="year"></span></footer>
+</div>
+
+<script>
+  document.getElementById("year").textContent = new Date().getFullYear();
+</script>
+</body>
+</html>
