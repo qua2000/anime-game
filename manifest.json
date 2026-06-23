@@ -1,0 +1,26 @@
+{
+  "name": "作品ギャラリー",
+  "short_name": "ギャラリー",
+  "description": "つくったゲームやアプリをまとめたギャラリー",
+  "start_url": "/anime-game/",
+  "scope": "/anime-game/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#2b2440",
+  "theme_color": "#332a4d",
+  "lang": "ja",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
