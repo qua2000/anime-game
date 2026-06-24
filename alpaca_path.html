@@ -346,30 +346,45 @@ function generatePuzzle() {
 }
 
 function hamiltonDFS(n) {
+  // 反復方式DFS（スタックオーバーフロー回避）
   const total = n * n;
   const visited = Array.from({length:n}, () => Array(n).fill(false));
-  const path = [];
+  const path = [[0, 0]];
+  const dirStack = [shuffle([[0,1],[0,-1],[1,0],[-1,0]])];
+  visited[0][0] = true;
 
-  function dfs(col, row) {
-    visited[col][row] = true;
-    path.push([col, row]);
+  while (path.length > 0) {
+    const [col, row] = path[path.length - 1];
+
     if (path.length === total) {
-      // ゴールに到達しているか確認
-      return col === n-1 && row === n-1;
+      if (col === n-1 && row === n-1) return path.slice();
+      // ゴールでなければバックトラック
+      visited[col][row] = false;
+      path.pop();
+      dirStack.pop();
+      continue;
     }
-    const dirs = shuffle([[0,1],[0,-1],[1,0],[-1,0]]);
-    for (const [dc, dr] of dirs) {
+
+    const dirs = dirStack[dirStack.length - 1];
+    let moved = false;
+    while (dirs.length > 0) {
+      const [dc, dr] = dirs.pop();
       const nc = col+dc, nr = row+dr;
       if (nc>=0 && nc<n && nr>=0 && nr<n && !visited[nc][nr]) {
-        if (dfs(nc, nr)) return true;
+        visited[nc][nr] = true;
+        path.push([nc, nr]);
+        dirStack.push(shuffle([[0,1],[0,-1],[1,0],[-1,0]]));
+        moved = true;
+        break;
       }
     }
-    visited[col][row] = false;
-    path.pop();
-    return false;
+    if (!moved) {
+      visited[col][row] = false;
+      path.pop();
+      dirStack.pop();
+    }
   }
-
-  return dfs(0, 0) ? path : null;
+  return null;
 }
 
 function snakePath(n) {
