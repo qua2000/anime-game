@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>アルパカの道しるべ</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  min-height: 100vh;
+  background: linear-gradient(160deg, #2b2440 0%, #5a4172 55%, #6c5189 100%);
+  font-family: 'Hiragino Maru Gothic ProN', 'Yu Gothic', 'Noto Sans JP', sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 8px 32px;
+  color: #f7f1e3;
+  overflow-x: hidden;
+}
+
+h1 {
+  font-size: clamp(1.2rem, 5vw, 1.7rem);
+  color: #e3aa3e;
+  text-align: center;
+  margin-bottom: 4px;
+  letter-spacing: 0.05em;
+  text-shadow: 0 2px 8px #2b244088;
+}
+.subtitle {
+  font-size: 0.78rem;
+  color: #c8b8e0;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.status-bar {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+.status-item {
+  background: #3d2f5588;
+  border: 1px solid #7a5fa060;
+  border-radius: 20px;
+  padding: 4px 14px;
+  font-size: 0.82rem;
+  color: #e3c87a;
+}
+.status-item span { color: #f7f1e3; font-weight: bold; }
+
+.rule-btn {
+  background: none;
+  border: 1px solid #c1502e88;
+  color: #f7c9b8;
+  border-radius: 50%;
+  width: 26px; height: 26px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.rule-panel {
+  display: none;
+  background: #2b2440ee;
+  border: 1px solid #7a5fa0;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 0.78rem;
+  line-height: 1.7;
+  color: #ddd0f0;
+  max-width: 320px;
+  margin-bottom: 8px;
+  text-align: left;
+}
+.rule-panel.open { display: block; }
+
+.puzzle-wrapper {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  margin-top: 4px;
+}
+.row-hints {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 0;
+}
+.row-hint-cell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding-left: 6px;
+  font-size: clamp(0.65rem, 2.5vw, 0.85rem);
+  font-weight: bold;
+}
+.grid-and-col-hints {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.col-hints {
+  display: flex;
+  flex-direction: row;
+  margin-top: 2px;
+}
+.col-hint-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  font-size: clamp(0.65rem, 2.5vw, 0.85rem);
+  font-weight: bold;
+}
+
+/* grid */
+#gridWrap {
+  position: relative;
+}
+#grid {
+  display: grid;
+  border: 2px solid #e3aa3e88;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 4px 24px #2b244066;
+  background: #2b2440;
+}
+
+.cell {
+  background: #3d2f55;
+  border: 1px solid #5a4172;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: background 0.1s;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.cell:hover { background: #4a3868; }
+.cell.filled {
+  background: #7a3a60;
+  border-color: #b05888;
+}
+.cell.start-cell { background: #5a3a10; border-color: #e3aa3e; }
+.cell.goal-cell  { background: #1a3a20; border-color: #4ec97a; }
+.cell.trail      { background: #5a2a10; }
+
+.cell-emoji {
+  font-size: clamp(0.9rem, 3.5vw, 1.4rem);
+  pointer-events: none;
+  line-height: 1;
+  position: relative;
+  z-index: 2;
+}
+
+/* SVG yarn overlay */
+#yarnSvg {
+  position: absolute;
+  top: 0; left: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* alpaca walker */
+#alpacaWalker {
+  position: absolute;
+  font-size: clamp(1.1rem, 5vw, 1.8rem);
+  pointer-events: none;
+  z-index: 20;
+  transition: top 0.2s ease, left 0.2s ease;
+  transform: translate(-50%, -50%);
+  display: none;
+  filter: drop-shadow(0 2px 6px #2b2440cc);
+}
+
+.btn-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.btn {
+  border: none;
+  border-radius: 22px;
+  padding: 9px 22px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  cursor: pointer;
+  font-weight: bold;
+  letter-spacing: 0.03em;
+  transition: transform 0.1s;
+  box-shadow: 0 2px 8px #2b244066;
+}
+.btn:active { transform: scale(0.95); }
+.btn:disabled { opacity: 0.4; cursor: default; }
+.btn-check { background: linear-gradient(135deg, #c1502e, #8e3a20); color: #f7f1e3; }
+.btn-clear { background: linear-gradient(135deg, #5a4172, #3d2f55); color: #c8b8e0; border: 1px solid #7a5fa080; }
+.btn-new   { background: linear-gradient(135deg, #e3aa3e, #b07a1a); color: #2b2440; }
+
+#message {
+  margin-top: 12px;
+  min-height: 28px;
+  font-size: 0.92rem;
+  text-align: center;
+  font-weight: bold;
+  color: #f7f1e3;
+}
+#message.error   { color: #f09080; }
+#message.success { color: #9ee09e; }
+
+/* celebration */
+#celebration {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: #1a102ccc;
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 14px;
+}
+#celebration.show { display: flex; }
+.cel-alpaca {
+  font-size: 5rem;
+  animation: alpacaDance 0.5s ease-in-out infinite alternate;
+}
+@keyframes alpacaDance {
+  from { transform: translateY(0) rotate(-8deg) scale(1); }
+  to   { transform: translateY(-18px) rotate(8deg) scale(1.12); }
+}
+.cel-text { font-size: 1.5rem; color: #e3aa3e; font-weight: bold; text-align: center; }
+.cel-sub  { font-size: 0.9rem; color: #c8b8e0; text-align: center; }
+.stars { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 99; }
+.star {
+  position: absolute; font-size: 1.4rem;
+  animation: starFall linear forwards;
+}
+@keyframes starFall {
+  0%   { opacity:1; transform: translateY(-40px) rotate(0deg); }
+  100% { opacity:0; transform: translateY(100vh) rotate(720deg); }
+}
+.cel-next-btn {
+  margin-top: 8px;
+  background: linear-gradient(135deg, #e3aa3e, #b07a1a);
+  color: #2b2440; border: none; border-radius: 22px;
+  padding: 11px 30px; font-size: 1rem; font-family: inherit;
+  font-weight: bold; cursor: pointer;
+}
+
+/* hint colors */
+.hint-ok   { color: #9ee09e; }
+.hint-over { color: #f09080; }
+.hint-pend { color: #e3aa3e; }
+.hint-num  { font-size: 1em; }
+.hint-cur  { font-size: 0.68em; margin-left: 2px; }
+</style>
+</head>
+<body>
+
+<h1>🦙 アルパカの道しるべ</h1>
+<p class="subtitle">スタート🟤からゴール🟢まで道を作ろう</p>
+
+<div class="status-bar">
+  <div class="status-item">レベル <span id="levelDisp">6×6</span></div>
+  <div class="status-item">🔥 連続クリア <span id="streakDisp">0</span> / 3</div>
+  <button class="rule-btn" id="ruleToggle">?</button>
+</div>
+
+<div class="rule-panel" id="rulePanel">
+  🦙 <b>遊び方</b><br>
+  ① マスをタップして道を塗る（もう一度タップで消去）<br>
+  ② スタート🟤〜ゴール🟢まで1本の道でつなごう<br>
+  ③ 同じマスは1回しか通れない・斜めはNG<br>
+  ④ <b>下のヒント</b>：その列を何マス通るか<br>
+  ⑤ <b>右のヒント</b>：その行を何マス通るか<br>
+  ⑥「判定」で正解チェック。正解するとアルパカが歩くよ🦙<br>
+  ⑦ 3回連続クリアでマスが広がるよ🎉
+</div>
+
+<div class="puzzle-wrapper">
+  <div class="grid-and-col-hints">
+    <div id="gridWrap">
+      <div id="grid"></div>
+      <div id="alpacaWalker">🦙</div>
+      <svg id="yarnSvg" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+    <div class="col-hints" id="colHints"></div>
+  </div>
+  <div class="row-hints" id="rowHints"></div>
+</div>
+
+<div class="btn-row">
+  <button class="btn btn-check" id="btnCheck" onclick="checkAnswer()">✅ 判定</button>
+  <button class="btn btn-clear" id="btnClear" onclick="clearAll()">🧹 全消し</button>
+  <button class="btn btn-new"   id="btnNew"   onclick="newPuzzle()">🔀 新しい問題</button>
+</div>
+
+<div id="message"></div>
+
+<div id="celebration">
+  <div class="stars" id="stars"></div>
+  <div class="cel-alpaca">🦙</div>
+  <div class="cel-text">やったー！クリア！</div>
+  <div class="cel-sub" id="celSub"></div>
+  <button class="cel-next-btn" onclick="closeCelebration()">つぎへ ▶</button>
+</div>
+
+<script>
+// ============================================================
+//  座標系: col=列(左から0始まり), row=行(下から0始まり)
+//  セルID: (col, row)  スタート=(0,0) ゴール=(N-1,N-1)
+//  画面上: 行rowは下からrow番目 → 視覚的上から (N-1-row) 番目
+// ============================================================
+
+let N = 6;
+let streak = 0;
+let colHintNums = [];   // colHintNums[col] = 通るマス数
+let rowHintNums = [];   // rowHintNums[row] = 通るマス数
+let filled = [];        // filled[col][row] = true/false
+let cellSize = 48;
+let isAnimating = false;
+
+// ── Init ──────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('ruleToggle').addEventListener('click', () => {
+    document.getElementById('rulePanel').classList.toggle('open');
+  });
+  newPuzzle();
+});
+
+// ── Puzzle Generation ─────────────────────────────────────
+// ハミルトンパス: (0,0)→(N-1,N-1) 全マスを1度ずつ通るランダムDFS
+function generatePuzzle() {
+  for (let attempt = 0; attempt < 500; attempt++) {
+    const path = hamiltonDFS(N);
+    if (path) return path;
+  }
+  // フォールバック: 蛇行パス
+  return snakePath(N);
+}
+
+function hamiltonDFS(n) {
+  const total = n * n;
+  const visited = Array.from({length:n}, () => Array(n).fill(false));
+  const path = [];
+
+  function dfs(col, row) {
+    visited[col][row] = true;
+    path.push([col, row]);
+    if (path.length === total) {
+      // ゴールに到達しているか確認
+      return col === n-1 && row === n-1;
+    }
+    const dirs = shuffle([[0,1],[0,-1],[1,0],[-1,0]]);
+    for (const [dc, dr] of dirs) {
+      const nc = col+dc, nr = row+dr;
+      if (nc>=0 && nc<n && nr>=0 && nr<n && !visited[nc][nr]) {
+        if (dfs(nc, nr)) return true;
+      }
+    }
+    visited[col][row] = false;
+    path.pop();
+    return false;
+  }
+
+  return dfs(0, 0) ? path : null;
+}
+
+function snakePath(n) {
+  // 列方向に蛇行
+  const path = [];
+  for (let col = 0; col < n; col++) {
+    if (col % 2 === 0) {
+      for (let row = 0; row < n; row++) path.push([col, row]);
+    } else {
+      for (let row = n-1; row >= 0; row--) path.push([col, row]);
+    }
+  }
+  return path;
+}
+
+function shuffle(arr) {
+  for (let i = arr.length-1; i > 0; i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]] = [arr[j],arr[i]];
+  }
+  return arr;
+}
+
+function computeHints(path, n) {
+  const colCount = Array(n).fill(0);
+  const rowCount = Array(n).fill(0);
+  for (const [col, row] of path) {
+    colCount[col]++;
+    rowCount[row]++;
+  }
+  return { colCount, rowCount };
+}
+
+// ── Build UI ──────────────────────────────────────────────
+function newPuzzle() {
+  if (isAnimating) return;
+  setMessage('');
+  clearYarn();
+
+  const path = generatePuzzle();
+  const { colCount, rowCount } = computeHints(path, N);
+  colHintNums = colCount;
+  rowHintNums = rowCount;
+
+  // filled[col][row]
+  filled = Array.from({length:N}, () => Array(N).fill(false));
+  filled[0][0] = true;
+  filled[N-1][N-1] = true;
+
+  buildGrid();
+  buildHints();
+  updateLevelDisplay();
+  setBtnsDisabled(false);
+}
+
+function calcCellSize() {
+  return Math.min(Math.floor((Math.min(window.innerWidth, 480) - 80) / N), 56);
+}
+
+function buildGrid() {
+  cellSize = calcCellSize();
+  const grid = document.getElementById('grid');
+  grid.style.gridTemplateColumns = `repeat(${N}, ${cellSize}px)`;
+  grid.style.gridTemplateRows    = `repeat(${N}, ${cellSize}px)`;
+  grid.innerHTML = '';
+
+  const totalPx = cellSize * N;
+  const wrap = document.getElementById('gridWrap');
+  wrap.style.width  = totalPx + 'px';
+  wrap.style.height = totalPx + 'px';
+
+  const svg = document.getElementById('yarnSvg');
+  svg.setAttribute('width',  totalPx);
+  svg.setAttribute('height', totalPx);
+  svg.setAttribute('viewBox', `0 0 ${totalPx} ${totalPx}`);
+
+  // 描画順: 視覚上の行 vr=0がrow=N-1(一番上)
+  for (let vr = 0; vr < N; vr++) {
+    const row = N - 1 - vr;
+    for (let col = 0; col < N; col++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.dataset.col = col;
+      cell.dataset.row = row;
+
+      const isStart = col===0   && row===0;
+      const isGoal  = col===N-1 && row===N-1;
+
+      if (isStart) {
+        cell.classList.add('start-cell', 'filled');
+        cell.innerHTML = '<span class="cell-emoji">🟤</span>';
+      } else if (isGoal) {
+        cell.classList.add('goal-cell', 'filled');
+        cell.innerHTML = '<span class="cell-emoji">🟢</span>';
+      }
+
+      cell.addEventListener('click', () => toggleCell(col, row));
+      grid.appendChild(cell);
+    }
+  }
+}
+
+function buildHints() {
+  // 列ヒント (グリッド下, 左→右 = col 0..N-1)
+  const colHintsEl = document.getElementById('colHints');
+  colHintsEl.innerHTML = '';
+  for (let col = 0; col < N; col++) {
+    const div = document.createElement('div');
+    div.className = 'col-hint-cell';
+    div.style.width  = cellSize + 'px';
+    div.style.height = '36px';
+    div.id = `ch-${col}`;
+    colHintsEl.appendChild(div);
+  }
+
+  // 行ヒント (グリッド右, 上→下 = row N-1..0)
+  const rowHintsEl = document.getElementById('rowHints');
+  rowHintsEl.innerHTML = '';
+  for (let vr = 0; vr < N; vr++) {
+    const row = N - 1 - vr;
+    const div = document.createElement('div');
+    div.className = 'row-hint-cell';
+    div.style.height   = cellSize + 'px';
+    div.style.minWidth = '52px';
+    div.id = `rh-${row}`;
+    rowHintsEl.appendChild(div);
+  }
+
+  updateHints();
+}
+
+function updateHints() {
+  const curCol = Array(N).fill(0);
+  const curRow = Array(N).fill(0);
+  for (let col=0; col<N; col++)
+    for (let row=0; row<N; row++)
+      if (filled[col][row]) { curCol[col]++; curRow[row]++; }
+
+  for (let col=0; col<N; col++) {
+    const el = document.getElementById(`ch-${col}`);
+    if (!el) continue;
+    const t = colHintNums[col], c = curCol[col];
+    const cls = c===t ? 'hint-ok' : c>t ? 'hint-over' : 'hint-pend';
+    el.innerHTML = `<span class="hint-num ${cls}">${t}</span><span class="hint-cur ${cls}">${c}/${t}</span>`;
+  }
+  for (let row=0; row<N; row++) {
+    const el = document.getElementById(`rh-${row}`);
+    if (!el) continue;
+    const t = rowHintNums[row], c = curRow[row];
+    const cls = c===t ? 'hint-ok' : c>t ? 'hint-over' : 'hint-pend';
+    el.innerHTML = `<span class="hint-num ${cls}">${t}</span><span class="hint-cur ${cls}">${c}/${t}</span>`;
+  }
+}
+
+// ── Interaction ───────────────────────────────────────────
+function toggleCell(col, row) {
+  if (isAnimating) return;
+  if (col===0&&row===0) return;
+  if (col===N-1&&row===N-1) return;
+
+  filled[col][row] = !filled[col][row];
+  const cell = getCell(col, row);
+  if (filled[col][row]) cell.classList.add('filled');
+  else                  cell.classList.remove('filled');
+  updateHints();
+  setMessage('');
+}
+
+function getCell(col, row) {
+  return document.querySelector(`.cell[data-col="${col}"][data-row="${row}"]`);
+}
+
+function clearAll() {
+  if (isAnimating) return;
+  clearYarn();
+  filled = Array.from({length:N}, () => Array(N).fill(false));
+  filled[0][0] = true;
+  filled[N-1][N-1] = true;
+  document.querySelectorAll('.cell').forEach(cell => {
+    const col = +cell.dataset.col, row = +cell.dataset.row;
+    const isStart = col===0&&row===0;
+    const isGoal  = col===N-1&&row===N-1;
+    if (!isStart && !isGoal) {
+      cell.classList.remove('filled','trail');
+    }
+  });
+  updateHints();
+  setMessage('');
+}
+
+// ── Answer Check ──────────────────────────────────────────
+function checkAnswer() {
+  if (isAnimating) return;
+
+  // 1. ヒント確認
+  const curCol = Array(N).fill(0);
+  const curRow = Array(N).fill(0);
+  for (let col=0;col<N;col++)
+    for (let row=0;row<N;row++)
+      if (filled[col][row]) { curCol[col]++; curRow[row]++; }
+
+  for (let col=0;col<N;col++) {
+    if (curCol[col] !== colHintNums[col]) {
+      setMessage(`❌ 列${col+1}のヒントが合っていないよ（${curCol[col]}/${colHintNums[col]}）`, 'error');
+      return;
+    }
+  }
+  for (let row=0;row<N;row++) {
+    if (curRow[row] !== rowHintNums[row]) {
+      setMessage(`❌ 行${row+1}のヒントが合っていないよ（${curRow[row]}/${rowHintNums[row]}）`, 'error');
+      return;
+    }
+  }
+
+  // 2. 連結性チェック (BFS でスタートからゴールへ、全塗りマスを通る)
+  const result = traceFilledPath();
+  if (!result.ok) {
+    setMessage(result.msg, 'error');
+    return;
+  }
+
+  // 3. 正解！アニメーション開始
+  setBtnsDisabled(true);
+  setMessage('🦙 アルパカが歩いてるよ…', 'success');
+  startWalkAnimation(result.orderedPath);
+}
+
+function traceFilledPath() {
+  // BFS: (0,0) から filled のマスをたどり (N-1,N-1) に到達するか
+  const visited = Array.from({length:N}, () => Array(N).fill(false));
+  const parent  = Array.from({length:N}, () => Array(N).fill(null));
+  const queue = [[0,0]];
+  visited[0][0] = true;
+  let count = 1;
+  const dirs = [[0,1],[0,-1],[1,0],[-1,0]];
+
+  while (queue.length) {
+    const [col,row] = queue.shift();
+    for (const [dc,dr] of dirs) {
+      const nc=col+dc, nr=row+dr;
+      if (nc>=0&&nc<N&&nr>=0&&nr<N&&!visited[nc][nr]&&filled[nc][nr]) {
+        visited[nc][nr] = true;
+        parent[nc][nr] = [col,row];
+        queue.push([nc,nr]);
+        count++;
+      }
+    }
+  }
+
+  const totalFilled = filled.flat().filter(Boolean).length;
+  if (!visited[N-1][N-1]) {
+    return { ok:false, msg:'❌ スタートからゴールまでつながっていないよ' };
+  }
+  if (count !== totalFilled) {
+    return { ok:false, msg:'❌ つながっていない部分があるよ' };
+  }
+
+  // パスを復元 (ゴールから逆順 → 反転)
+  const orderedPath = [];
+  let cur = [N-1, N-1];
+  while (cur) {
+    orderedPath.push(cur);
+    cur = parent[cur[0]][cur[1]];
+  }
+  orderedPath.reverse();
+  return { ok:true, orderedPath };
+}
+
+// ── Walk Animation ────────────────────────────────────────
+// col,row → 画面上のピクセル中心
+function cellCenter(col, row) {
+  const vr = N - 1 - row;   // 視覚的な行(上から)
+  const x = col * cellSize + cellSize / 2;
+  const y = vr  * cellSize + cellSize / 2;
+  return { x, y };
+}
+
+function clearYarn() {
+  document.getElementById('yarnSvg').innerHTML = '';
+  const walker = document.getElementById('alpacaWalker');
+  walker.style.display = 'none';
+  document.querySelectorAll('.cell.trail').forEach(el => el.classList.remove('trail'));
+}
+
+async function startWalkAnimation(orderedPath) {
+  isAnimating = true;
+  clearYarn();
+
+  const walker = document.getElementById('alpacaWalker');
+  walker.style.display = 'block';
+
+  const svg = document.getElementById('yarnSvg');
+  const STEP_MS = Math.max(100, Math.min(260, 1400 / orderedPath.length));
+
+  // スタート位置に瞬間移動
+  const sp = cellCenter(orderedPath[0][0], orderedPath[0][1]);
+  walker.style.transition = 'none';
+  walker.style.left = sp.x + 'px';
+  walker.style.top  = sp.y + 'px';
+
+  await sleep(80);
+
+  // 毛糸ポリライン
+  let pointsStr = `${sp.x},${sp.y}`;
+  const polyline = document.createElementNS('http://www.w3.org/2000/svg','polyline');
+  polyline.setAttribute('fill','none');
+  polyline.setAttribute('stroke','#e3aa3e');
+  polyline.setAttribute('stroke-width', Math.max(3, cellSize * 0.15));
+  polyline.setAttribute('stroke-linecap','round');
+  polyline.setAttribute('stroke-linejoin','round');
+  polyline.setAttribute('opacity','0.9');
+  polyline.setAttribute('points', pointsStr);
+  svg.appendChild(polyline);
+
+  walker.style.transition = `top ${STEP_MS*0.88}ms ease, left ${STEP_MS*0.88}ms ease`;
+
+  for (let i = 1; i < orderedPath.length; i++) {
+    const [col, row] = orderedPath[i];
+    const pos = cellCenter(col, row);
+
+    walker.style.left = pos.x + 'px';
+    walker.style.top  = pos.y + 'px';
+
+    pointsStr += ` ${pos.x},${pos.y}`;
+    polyline.setAttribute('points', pointsStr);
+
+    // 通過済みマスをトレイル色に
+    const prev = orderedPath[i-1];
+    const prevCell = getCell(prev[0], prev[1]);
+    if (prevCell && !prevCell.classList.contains('start-cell') && !prevCell.classList.contains('goal-cell')) {
+      prevCell.classList.add('trail');
+    }
+
+    await sleep(STEP_MS);
+  }
+
+  // ゴールでバウンス
+  walker.style.transition = 'none';
+  await sleep(80);
+  const gp = cellCenter(N-1, N-1);
+  for (let b = 0; b < 3; b++) {
+    walker.style.transition = 'top 0.12s ease';
+    walker.style.top = (gp.y - 14) + 'px';
+    await sleep(140);
+    walker.style.top = gp.y + 'px';
+    await sleep(140);
+  }
+
+  await sleep(200);
+  handleClear();
+  isAnimating = false;
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ── Clear / Level Up ──────────────────────────────────────
+function handleClear() {
+  streak++;
+  document.getElementById('streakDisp').textContent = streak;
+
+  let celSub = '';
+  if (streak % 3 === 0) {
+    N = Math.min(N + 1, 12);
+    celSub = `🎊 レベルアップ！ → ${N}×${N} マスになったよ！`;
+    streak = 0;
+    document.getElementById('streakDisp').textContent = 0;
+  } else {
+    celSub = `あと ${3 - (streak % 3)} 回クリアでレベルアップ！`;
+  }
+  showCelebration(celSub);
+}
+
+function showCelebration(subText) {
+  document.getElementById('celSub').textContent = subText;
+  document.getElementById('celebration').classList.add('show');
+  const starsEl = document.getElementById('stars');
+  starsEl.innerHTML = '';
+  const emojis = ['⭐','🌟','✨','🎉','🦙','🌿','💛','🎊'];
+  for (let i = 0; i < 28; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    s.textContent = emojis[Math.floor(Math.random()*emojis.length)];
+    s.style.left = Math.random()*100 + 'vw';
+    s.style.animationDuration = (1.5 + Math.random()*2) + 's';
+    s.style.animationDelay    = (Math.random()*1.2) + 's';
+    starsEl.appendChild(s);
+  }
+}
+
+function closeCelebration() {
+  document.getElementById('celebration').classList.remove('show');
+  newPuzzle();
+}
+
+// ── Helpers ───────────────────────────────────────────────
+function setMessage(msg, type='') {
+  const el = document.getElementById('message');
+  el.textContent = msg;
+  el.className = type;
+}
+function updateLevelDisplay() {
+  document.getElementById('levelDisp').textContent = `${N}×${N}`;
+}
+function setBtnsDisabled(d) {
+  ['btnCheck','btnClear','btnNew'].forEach(id => {
+    document.getElementById(id).disabled = d;
+  });
+}
+</script>
+</body>
+</html>
