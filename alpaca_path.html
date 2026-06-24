@@ -337,64 +337,73 @@ window.addEventListener('DOMContentLoaded', () => {
 // ── Puzzle Generation ─────────────────────────────────────
 // ハミルトンパス: (0,0)→(N-1,N-1) 全マスを1度ずつ通るランダムDFS
 function generatePuzzle() {
-  for (let attempt = 0; attempt < 500; attempt++) {
-    const path = hamiltonDFS(N);
-    if (path) return path;
-  }
-  // フォールバック: 蛇行パス
-  return snakePath(N);
+  // 蛇行パスを出発点にして、2×2ブロック回転で十分にランダム化
+  let path = snakePath(N);
+  path = randomizeByRotation(path, N);
+  return path;
 }
 
-function hamiltonDFS(n) {
-  // 反復方式DFS（スタックオーバーフロー回避）
-  const total = n * n;
-  const visited = Array.from({length:n}, () => Array(n).fill(false));
-  const path = [[0, 0]];
-  const dirStack = [shuffle([[0,1],[0,-1],[1,0],[-1,0]])];
-  visited[0][0] = true;
-
-  while (path.length > 0) {
-    const [col, row] = path[path.length - 1];
-
-    if (path.length === total) {
-      if (col === n-1 && row === n-1) return path.slice();
-      // ゴールでなければバックトラック
-      visited[col][row] = false;
-      path.pop();
-      dirStack.pop();
-      continue;
-    }
-
-    const dirs = dirStack[dirStack.length - 1];
-    let moved = false;
-    while (dirs.length > 0) {
-      const [dc, dr] = dirs.pop();
-      const nc = col+dc, nr = row+dr;
-      if (nc>=0 && nc<n && nr>=0 && nr<n && !visited[nc][nr]) {
-        visited[nc][nr] = true;
-        path.push([nc, nr]);
-        dirStack.push(shuffle([[0,1],[0,-1],[1,0],[-1,0]]));
-        moved = true;
-        break;
-      }
-    }
-    if (!moved) {
-      visited[col][row] = false;
-      path.pop();
-      dirStack.pop();
-    }
-  }
-  return null;
-}
-
+// 列方向の蛇行パス（必ず(0,0)スタート・(N-1,N-1)ゴール・全マス通過）
 function snakePath(n) {
-  // 列方向に蛇行
   const path = [];
   for (let col = 0; col < n; col++) {
     if (col % 2 === 0) {
       for (let row = 0; row < n; row++) path.push([col, row]);
     } else {
       for (let row = n-1; row >= 0; row--) path.push([col, row]);
+    }
+  }
+  return path;
+}
+
+// 2×2ブロック内でパスの角を切り替えてランダム化
+// 例: (c,r)→(c+1,r)→(c+1,r+1)→(c,r+1) を
+//     (c,r)→(c,r+1)→(c+1,r+1)→(c+1,r) に変換（逆も同様）
+function randomizeByRotation(path, n) {
+  // パスをインデックスマップに変換: posMap[col][row] = pathIndex
+  const posMap = Array.from({length:n}, () => Array(n).fill(-1));
+  for (let i = 0; i < path.length; i++) {
+    posMap[path[i][0]][path[i][1]] = i;
+  }
+
+  const iters = n * n * 8; // 十分な回数ランダム変形
+  for (let t = 0; t < iters; t++) {
+    // ランダムな2×2ブロックを選ぶ
+    const c = Math.floor(Math.random() * (n-1));
+    const r = Math.floor(Math.random() * (n-1));
+
+    // 4隅のパス上のインデックス
+    const i00 = posMap[c][r];
+    const i10 = posMap[c+1][r];
+    const i01 = posMap[c][r+1];
+    const i11 = posMap[c+1][r+1];
+
+    // パターンA: (c,r)→(c+1,r) かつ (c,r+1)→(c+1,r+1) が連続している
+    // → (c,r)→(c,r+1) かつ (c+1,r)→(c+1,r+1) に変換
+    if (i10 === i00+1 && i11 === i01+1) {
+      // スタートかゴールが切り替え点にならないか確認
+      const minI = Math.min(i00, i01);
+      const maxI = Math.max(i10, i11);
+      if (minI === 0 || maxI === n*n-1) continue;
+
+      // 切り替え: path[i00+1] と path[i01+1] を入れ替え
+      [path[i00+1], path[i01+1]] = [path[i01+1], path[i00+1]];
+      posMap[c+1][r]   = i01+1;
+      posMap[c][r+1]   = i00+1;
+      continue;
+    }
+
+    // パターンB: (c,r)→(c,r+1) かつ (c+1,r)→(c+1,r+1) が連続している
+    // → (c,r)→(c+1,r) かつ (c,r+1)→(c+1,r+1) に変換
+    if (i01 === i00+1 && i11 === i10+1) {
+      const minI = Math.min(i00, i10);
+      const maxI = Math.max(i01, i11);
+      if (minI === 0 || maxI === n*n-1) continue;
+
+      [path[i00+1], path[i10+1]] = [path[i10+1], path[i00+1]];
+      posMap[c][r+1]   = i10+1;
+      posMap[c+1][r]   = i00+1;
+      continue;
     }
   }
   return path;
